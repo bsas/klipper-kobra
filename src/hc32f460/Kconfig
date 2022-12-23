@@ -1,0 +1,104 @@
+# Kconfig settings for Huada HC32F460 processor
+
+if MACH_HC32F460
+
+config HC32F460_SELECT
+    bool
+    default y
+    select HAVE_GPIO
+    select HAVE_GPIO_ADC
+    select HAVE_GPIO_BITBANGING
+    select HAVE_STRICT_TIMING
+    select HAVE_GPIO_HARD_PWM
+    select HAVE_STEPPER_BOTH_EDGE
+
+config BOARD_DIRECTORY
+    string
+    default "hc32f460"
+
+choice   # different vendors have different bootloaders and circuitry
+    prompt "Mainboard hint"
+    config CREALITY_ENDER2_PRO
+        bool "Creality CR-FDM-v2.4.S4.170"
+    config ANYCUBIC_KOBRA
+        bool "Anycubic Trigorilla_Pro_A_V1.0.4"
+    config VOXELAB_AQUILA_X1
+        bool "FFP0234_Aquila_X1_Main_Board_V1.0.0"
+    config VOXELAB_AQUILA
+        bool "FFP0173_Aquila_Main_Board_V1.0.3"
+endchoice
+
+
+config LCD_DRIVE_INVERT
+    depends on VOXELAB_AQUILA_X1
+    bool
+    default y
+
+
+
+######################################################################
+# Communication interface
+######################################################################
+
+choice
+    prompt "Communication interface"
+    config HC32F460_SERIAL_PA7_PA8
+        depends on CREALITY_ENDER2_PRO
+        bool "Serial (PA7 & PA8) - Creality Ender 2 PRO"
+        select SERIAL
+    config HC32F460_SERIAL_PA3_PA2
+        depends on ANYCUBIC_KOBRA
+        bool "Serial (PA3 & PA2) - Anycube"
+        select SERIAL
+    config HC32F460_SERIAL_PA15_PA9
+        bool "Serial (PA15 & PA09) - Voxelab"
+        select SERIAL
+    config HC32F460_SERIAL_PC0_PC1
+        depends on VOXELAB_AQUILA
+        bool "Serial (PC0 & PC1) - on LCD connector"
+        select SERIAL
+endchoice
+
+
+######################################################################
+# Bootloader
+# bootloader moves code and then VTOR.RESET points here:
+######################################################################
+config FLASH_SIZE
+    hex
+    default 0x40000
+
+config FLASH_APPLICATION_ADDRESS
+    hex
+    default 0x8000 if ANYCUBIC_KOBRA || VOXELAB_AQUILA_X1 || CREALITY_ENDER2_PRO
+    default 0xC000 if VOXELAB_AQUILA
+
+config FLASH_BOOT_ADDRESS
+    hex
+    default 0x0
+
+config RAM_SIZE
+    hex
+    default 0x8000
+
+# use the fast RAM in the HC32F460
+config RAM_START
+    hex
+    default 0x1fff8000
+
+config STACK_SIZE
+    int
+    default 1024
+
+
+config CLOCK_FREQ
+    int
+    default 200000000 if ANYCUBIC_KOBRA || CREALITY_ENDER2_PRO
+    default 168000000 if VOXELAB_AQUILA || VOXELAB_AQUILA_X1
+
+
+config MCU
+    string
+    default "HC32F460"
+
+endif

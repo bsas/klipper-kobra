@@ -12,6 +12,19 @@
 #include "command.h" // DECL_COMMAND
 #include "sched.h" // DECL_SHUTDOWN
 
+
+// some boards (eg Aquila C2 H32) invert the drive pins for level matching
+#if (CONFIG_LCD_DRIVE_INVERT)
+#define SCLK_INIT_VAL 1
+#define SID_INIT_VAL  1
+#define CS_INIT_VAL   0
+#else
+#define SCLK_INIT_VAL 0
+#define SID_INIT_VAL  0
+#define CS_INIT_VAL   1
+#endif
+
+
 struct st7920 {
     uint32_t last_cmd_time, sync_wait_ticks, cmd_wait_ticks;
     struct gpio_out sclk, sid;
@@ -102,16 +115,17 @@ void
 command_config_st7920(uint32_t *args)
 {
     struct st7920 *s = oid_alloc(args[0], command_config_st7920, sizeof(*s));
-    s->sclk = gpio_out_setup(args[2], 0);
-    s->sid = gpio_out_setup(args[3], 0);
-    gpio_out_setup(args[1], 1);
 
-    if (!CONFIG_HAVE_STRICT_TIMING) {
-        s->sync_wait_ticks = args[4];
-        s->cmd_wait_ticks = args[5];
-        return;
-    }
+    // set the initial values - Chip Select stays asserted
+    s->sclk = gpio_out_setup(args[2], SCLK_INIT_VAL);
+    s->sid = gpio_out_setup(args[3], SID_INIT_VAL);
+    gpio_out_setup(args[1], CS_INIT_VAL);
 
+
+#if (!CONFIG_HAVE_STRICT_TIMING)
+    s->sync_wait_ticks = args[4];
+    s->cmd_wait_ticks = args[5];
+#else
     // Calibrate cmd_wait_ticks
     st7920_xmit_byte(s, SYNC_CMD);
     st7920_xmit_byte(s, 0x20);
@@ -127,6 +141,7 @@ command_config_st7920(uint32_t *args)
     uint32_t cmd_delay_ticks = args[5];
     if (cmd_delay_ticks > diff)
         s->cmd_wait_ticks = cmd_delay_ticks - diff;
+#endif
 }
 DECL_COMMAND(command_config_st7920,
              "config_st7920 oid=%c cs_pin=%u sclk_pin=%u sid_pin=%u"
